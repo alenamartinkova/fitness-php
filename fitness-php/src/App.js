@@ -1,13 +1,13 @@
 import "./index.css";
-import Nav from "../components/Nav";
-import Header from "../components/Header";
-import Special from "../components/Special";
-import Why from "../components/Why";
-import Divider from "../components/Divider";
-import AboutMe from "../components/AboutMe";
-import Education from "../components/Education";
-import Pricing from "../components/Pricing";
-import Footer from "../components/Footer";
+import Nav from "./components/Nav";
+import Header from "./components/Header";
+import Special from "./components/Special";
+import Why from "./components/Why";
+import Divider from "./components/Divider";
+import AboutMe from "./components/AboutMe";
+import Education from "./components/Education";
+import Pricing from "./components/Pricing";
+import Footer from "./components/Footer";
 import { useEffect, useState } from "react";
 
 function App() {
@@ -20,11 +20,12 @@ function App() {
 				setTexts(JSON.parse(cachedTexts));
 			} else {
 				try {
-					const response = await fetch("/api/select");
-					const data = await response.json();
-					if (data.error) {
-						throw new Error("Error");
+					const response = await fetch("http://localhost:8000/api/select.php");
+					if (!response.ok) {
+						throw new Error(`HTTP error! status: ${response.status}`);
 					}
+
+					const data = await response.json();
 					localStorage.setItem("texts", JSON.stringify(data));
 					setTexts(data);
 				} catch (error) {
