@@ -5,15 +5,71 @@ import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
 export default function Admin() {
+	const [isAuthenticated, setIsAuthenticated] = useState(checkLoginStatus);
+	const [username, setUsername] = useState('');
+	const [password, setPassword] = useState('');
 	const [texts, setTexts] = useState([]);
 	const [originalTexts, setOriginalTexts] = useState([]);
 	const [showSuccessToast, setShowSuccessToast] = useState(false);
 	const [showErrorToast, setShowErrorToast] = useState(false);
 
-	// Authenticate User
 	useEffect(() => {
-		fetchData();
-	}, []);
+		if (isAuthenticated) {
+			fetchData();
+		}
+	}, [isAuthenticated]);
+
+	function checkLoginStatus() {
+		const isLoggedIn = localStorage.getItem('isLoggedIn');
+		const expiryTime = localStorage.getItem('expiryTime');
+		if (!isLoggedIn || !expiryTime) {
+			return false;
+		}
+
+		const now = new Date();
+		if (now > new Date(expiryTime)) {
+			// Session has expired
+			localStorage.removeItem('isLoggedIn');
+			localStorage.removeItem('expiryTime');
+			return false;
+		}
+
+		return true;
+	}
+
+	const handleLogin = async (event) => {
+		event.preventDefault();
+		try {
+			const response = await fetch("http://localhost:8000/api/login.php", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ username, password }),
+				credentials: 'include',
+			});
+			if (!response.ok) {
+				throw new Error("Login failed");
+			}
+			const data = await response.json();
+			// Assuming the API returns a success status to indicate a successful login
+			if (data.success) {
+				setIsAuthenticated(true);
+				const now = new Date();
+				const expiryTime = new Date(now.getTime() + 60*60*1000); // 1 hour from now
+				localStorage.setItem('isLoggedIn', 'true');
+				localStorage.setItem('expiryTime', expiryTime.toISOString());
+			} else {
+				setIsAuthenticated(false);
+				setShowErrorToast(true);
+				setTimeout(() => setShowErrorToast(false), 3000);
+			}
+		} catch (error) {
+			console.error("Login error:", error);
+			setShowErrorToast(true);
+			setTimeout(() => setShowErrorToast(false), 3000);
+		}
+	};
 
 	// Fetch Data from the Database
 	const fetchData = async () => {
@@ -82,6 +138,46 @@ export default function Admin() {
 		}, 500),
 		[]
 	);
+
+	if (!isAuthenticated) {
+		return (
+			<div className="container mx-auto flex flex-col gap-4 my-4">
+				<form onSubmit={handleLogin}>
+					<div className="mb-4">
+						<label className="block mb-2 font-medium">Login</label>
+						<input
+							type="text"
+							value={username}
+							onChange={(e) => setUsername(e.target.value)}
+							className={'border rounded-lg py-2 px-3'}
+							required
+						/>
+					</div>
+					<div className="mb-4">
+						<label className="block mb-2 font-medium">Heslo</label>
+						<input
+							type="password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							className={'border rounded-lg py-2 px-3'}
+							required
+						/>
+					</div>
+					<button
+						type="submit"
+						className="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg w-auto text-center py-2 px-6"
+					>
+						Login
+					</button>
+				</form>
+				{showErrorToast && (
+					<div className="bg-red-500 text-white p-4 rounded-md text-center">
+						Error logging in!
+					</div>
+				)}
+			</div>
+		);
+	}
 
 	return (
 		<div className={"container mx-auto flex flex-col gap-4 my-4"}>
